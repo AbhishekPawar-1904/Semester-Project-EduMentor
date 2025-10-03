@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, Clock, CheckCircle2 } from "lucide-react";
+import { Brain, Clock, CircleCheck as CheckCircle2 } from "lucide-react";
 
 interface QuizQuestion {
   id: string;

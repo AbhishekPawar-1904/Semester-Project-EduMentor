@@ -6,14 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Users,
-  BookOpen,
-  Calendar,
-  BarChart3,
-  Settings,
-  TrendingUp,
-} from "lucide-react";
+import { Users, BookOpen, Calendar, ChartBar as BarChart3, Settings, TrendingUp } from "lucide-react";
 import { ManageUsers } from "@/components/admin/ManageUsers";
 import { ManageCareers } from "@/components/admin/ManageCareers";
 import { ManageQuizzes } from "@/components/admin/ManageQuizzes";

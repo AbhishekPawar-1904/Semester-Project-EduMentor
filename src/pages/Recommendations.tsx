@@ -8,15 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  TrendingUp,
-  Briefcase,
-  DollarSign,
-  GraduationCap,
-  Star,
-  ArrowRight,
-  BarChart3
-} from "lucide-react";
+import { TrendingUp, Briefcase, DollarSign, GraduationCap, Star, ArrowRight, ChartBar as BarChart3 } from "lucide-react";
 
 interface Career {
   id: string;

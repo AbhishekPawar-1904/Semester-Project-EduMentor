@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Calendar as CalendarIcon, User, CheckCircle2 } from "lucide-react";
+import { Clock, Calendar as CalendarIcon, User, CircleCheck as CheckCircle2 } from "lucide-react";
 
 interface MentorProfile {
   id: string;
