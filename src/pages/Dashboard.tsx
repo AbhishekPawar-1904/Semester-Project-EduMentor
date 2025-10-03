@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ interface StudentProfile {
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -193,7 +195,7 @@ const Dashboard = () => {
                   <div className="text-center py-8 text-muted-foreground">
                     <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Complete your profile and take assessments to get personalized career recommendations</p>
-                    <Button className="mt-4">Take Assessment Quiz</Button>
+                    <Button className="mt-4" onClick={() => navigate('/aptitude-quiz')}>Take Assessment Quiz</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -222,13 +224,13 @@ const Dashboard = () => {
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="hero" className="w-full">
+                  <Button variant="hero" className="w-full" onClick={() => navigate('/mentors')}>
                     <MessageCircle className="h-4 w-4 mr-2" />
-                    Chat with Mentor
+                    Find a Mentor
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={() => navigate('/aptitude-quiz')}>
                     <Target className="h-4 w-4 mr-2" />
-                    Retake Assessment
+                    Take Assessment
                   </Button>
                   <Button variant="outline" className="w-full">
                     <BookOpen className="h-4 w-4 mr-2" />
@@ -250,7 +252,7 @@ const Dashboard = () => {
                   <div className="text-center py-4 text-muted-foreground">
                     <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-sm">No mentor assigned yet</p>
-                    <Button variant="link" className="mt-2">Find a Mentor</Button>
+                    <Button variant="link" className="mt-2" onClick={() => navigate('/mentors')}>Find a Mentor</Button>
                   </div>
                 </CardContent>
               </Card>

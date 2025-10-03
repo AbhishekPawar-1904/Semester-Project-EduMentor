@@ -8,6 +8,11 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import AptitudeQuiz from "./pages/AptitudeQuiz";
+import Recommendations from "./pages/Recommendations";
+import Mentors from "./pages/Mentors";
+import BookSession from "./pages/BookSession";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -27,6 +32,31 @@ const App = () => (
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/aptitude-quiz" element={
+              <ProtectedRoute>
+                <AptitudeQuiz />
+              </ProtectedRoute>
+            } />
+            <Route path="/recommendations" element={
+              <ProtectedRoute>
+                <Recommendations />
+              </ProtectedRoute>
+            } />
+            <Route path="/mentors" element={
+              <ProtectedRoute>
+                <Mentors />
+              </ProtectedRoute>
+            } />
+            <Route path="/book-session/:mentorId" element={
+              <ProtectedRoute>
+                <BookSession />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
