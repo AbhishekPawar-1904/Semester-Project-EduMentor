@@ -5,12 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
-import { Briefcase, Calendar } from "lucide-react";
+import { Briefcase, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const Mentors = () => {
   const [mentors, setMentors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [bookingMentor, setBookingMentor] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +30,46 @@ const Mentors = () => {
       .eq("status", "approved");
     setMentors(data || []);
     setLoading(false);
+  };
+
+  const handleBookSession = async (mentorId: string) => {
+    if (!selectedDate) {
+      toast.error("Please select a date for your session.");
+      return;
+    }
+
+    setIsBooking(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const scheduledDate = new Date(selectedDate);
+      scheduledDate.setHours(10, 0, 0, 0);
+
+      const { error } = await supabase
+        .from("appointments")
+        .insert({
+          student_id: user.id,
+          mentor_id: mentorId,
+          scheduled_at: scheduledDate.toISOString(),
+          status: "pending",
+          duration_minutes: 60,
+        });
+
+      if (error) throw error;
+
+      toast.success("Session booked! The mentor will confirm shortly.");
+      setBookingMentor(null);
+      setSelectedDate(undefined);
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to book session.");
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -88,13 +134,48 @@ const Mentors = () => {
                       <span className="font-semibold">{mentor.experience_years}</span> years experience
                     </p>
                   )}
-                  <Button 
-                    className="w-full" 
-                    onClick={() => navigate(`/book-session/${mentor.user_id}`)}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Book Session
-                  </Button>
+                  <Dialog open={bookingMentor === mentor.user_id} onOpenChange={(open) => !open && setBookingMentor(null)}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="w-full" 
+                        onClick={() => setBookingMentor(mentor.user_id)}
+                      >
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        Book Session
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Book a Session with {mentor.profiles?.full_name}</DialogTitle>
+                        <DialogDescription>
+                          Select a date for your mentorship session. Sessions are 1 hour long.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex flex-col items-center space-y-4">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          disabled={(date) => date < new Date()}
+                          className="rounded-md border"
+                        />
+                        <Button 
+                          onClick={() => handleBookSession(mentor.user_id)}
+                          disabled={!selectedDate || isBooking}
+                          className="w-full"
+                        >
+                          {isBooking ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Booking...
+                            </>
+                          ) : (
+                            "Confirm Booking"
+                          )}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardContent>
               </Card>
             ))}

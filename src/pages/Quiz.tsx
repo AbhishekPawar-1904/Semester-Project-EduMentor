@@ -109,7 +109,7 @@ const Quiz = () => {
       });
 
       toast.success("Quiz completed! See your recommendations.");
-      navigate("/results");
+      navigate("/quiz-results");
     } catch (error: any) {
       console.error("Quiz error:", error);
       toast.error("Failed to process quiz. Please try again.");

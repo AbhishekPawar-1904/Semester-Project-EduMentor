@@ -1,27 +1,31 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { GraduationCap, LogOut, User } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { GraduationCap, LogOut, Shield } from "lucide-react";
+import { toast } from "sonner";
 
-const Navbar = () => {
-  const { user, signOut } = useAuth();
+export default function Navbar() {
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/");
+      toast.success("Signed out successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Error signing out");
+    }
+  };
 
   return (
     <nav className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="bg-gradient-primary p-2 rounded-lg">
-              <GraduationCap className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+            <GraduationCap className="h-6 w-6 text-primary" />
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               EduMentor
             </span>
           </Link>
@@ -38,22 +42,27 @@ const Navbar = () => {
                 <Link to="/mentors">
                   <Button variant="ghost">Mentors</Button>
                 </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <User className="h-5 w-5" />
+                <Link to="/colleges">
+                  <Button variant="ghost">Colleges</Button>
+                </Link>
+                <Link to="/scholarships">
+                  <Button variant="ghost">Scholarships</Button>
+                </Link>
+                <Link to="/quiz">
+                  <Button variant="ghost">Quiz</Button>
+                </Link>
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="outline" size="sm">
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate("/profile")}>
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={signOut}>
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </Link>
+                )}
+                <Button onClick={handleSignOut} variant="outline" size="sm">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </>
             ) : (
               <Link to="/auth">
@@ -65,6 +74,4 @@ const Navbar = () => {
       </div>
     </nav>
   );
-};
-
-export default Navbar;
+}
