@@ -76,7 +76,7 @@ const Mentors = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-slide-up">
           <h1 className="text-4xl font-bold mb-2">Find a Mentor</h1>
           <p className="text-muted-foreground text-lg">
             Connect with experienced professionals to guide your career journey
@@ -84,7 +84,9 @@ const Mentors = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">Loading mentors...</div>
+          <div className="text-center py-12">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-secondary border-r-transparent"></div>
+          </div>
         ) : mentors.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

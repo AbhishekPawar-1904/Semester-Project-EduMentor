@@ -41,7 +41,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-slide-up">
           <h1 className="text-3xl font-bold mb-2">Welcome back, {profile?.full_name}!</h1>
           <p className="text-muted-foreground">
             {profile?.role === "student" 
@@ -51,33 +51,41 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="hover:shadow-soft transition-shadow cursor-pointer" onClick={() => navigate("/quiz")}>
+          <Card className="hover-lift hover:border-primary transition-all cursor-pointer animate-fade-in" onClick={() => navigate("/quiz")} style={{animationDelay: '0.1s'}}>
             <CardHeader>
-              <Brain className="h-8 w-8 text-primary mb-2" />
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
               <CardTitle>Career Quiz</CardTitle>
               <CardDescription>Discover your perfect career path</CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-soft transition-shadow cursor-pointer" onClick={() => navigate("/appointments")}>
+          <Card className="hover-lift hover:border-accent transition-all cursor-pointer animate-fade-in" onClick={() => navigate("/careers")} style={{animationDelay: '0.2s'}}>
             <CardHeader>
-              <Calendar className="h-8 w-8 text-accent mb-2" />
-              <CardTitle>Sessions</CardTitle>
-              <CardDescription>Manage your mentorship meetings</CardDescription>
+              <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center mb-2">
+                <Calendar className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle>Careers</CardTitle>
+              <CardDescription>Explore career opportunities</CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-soft transition-shadow cursor-pointer" onClick={() => navigate("/resources")}>
+          <Card className="hover-lift hover:border-secondary transition-all cursor-pointer animate-fade-in" onClick={() => navigate("/mentors")} style={{animationDelay: '0.3s'}}>
             <CardHeader>
-              <BookOpen className="h-8 w-8 text-secondary mb-2" />
-              <CardTitle>Resources</CardTitle>
-              <CardDescription>Explore educational materials</CardDescription>
+              <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center mb-2">
+                <BookOpen className="h-6 w-6 text-secondary" />
+              </div>
+              <CardTitle>Mentors</CardTitle>
+              <CardDescription>Connect with experts</CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-soft transition-shadow cursor-pointer" onClick={() => navigate("/scholarships")}>
+          <Card className="hover-lift hover:border-success transition-all cursor-pointer animate-fade-in" onClick={() => navigate("/scholarships")} style={{animationDelay: '0.4s'}}>
             <CardHeader>
-              <Award className="h-8 w-8 text-success mb-2" />
+              <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center mb-2">
+                <Award className="h-6 w-6 text-success" />
+              </div>
               <CardTitle>Scholarships</CardTitle>
               <CardDescription>Find funding opportunities</CardDescription>
             </CardHeader>
