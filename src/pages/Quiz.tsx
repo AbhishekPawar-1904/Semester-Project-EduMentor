@@ -121,38 +121,47 @@ const Quiz = () => {
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid-pattern">
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <Card className="shadow-glow">
+        <Card className="shadow-glow animate-fade-in hover-lift">
           <CardHeader>
-            <CardTitle>Career Assessment Quiz</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-3xl bg-gradient-primary bg-clip-text text-transparent animate-slide-in-left">
+              Career Assessment Quiz
+            </CardTitle>
+            <CardDescription className="animate-slide-in-right" style={{animationDelay: '0.1s'}}>
               Answer these questions to discover careers that match your interests and skills
             </CardDescription>
-            <div className="w-full bg-muted rounded-full h-2 mt-4">
+            <div className="w-full bg-muted rounded-full h-3 mt-4 overflow-hidden">
               <div
-                className="bg-gradient-primary h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
+                className="h-3 rounded-full transition-all duration-500 ease-out animate-pulse"
+                style={{ 
+                  width: `${progress}%`,
+                  background: 'var(--gradient-primary)'
+                }}
               />
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-muted-foreground mt-2 animate-fade-in">
               Question {currentQuestion + 1} of {questions.length}
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
+            <div key={currentQuestion} className="animate-slide-in-right">
+              <h3 className="text-xl font-semibold mb-6 text-foreground">
                 {questions[currentQuestion].question}
               </h3>
               <RadioGroup
                 value={answers[questions[currentQuestion].id]}
                 onValueChange={handleAnswer}
               >
-                {questions[currentQuestion].options.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2 mb-3">
+                {questions[currentQuestion].options.map((option, idx) => (
+                  <div 
+                    key={option.value} 
+                    className="flex items-center space-x-3 mb-4 p-4 rounded-lg border border-border hover:border-primary hover:bg-accent/5 transition-all duration-300 cursor-pointer animate-fade-in hover-lift"
+                    style={{animationDelay: `${idx * 0.1}s`}}
+                  >
                     <RadioGroupItem value={option.value} id={option.value} />
-                    <Label htmlFor={option.value} className="cursor-pointer flex-1">
+                    <Label htmlFor={option.value} className="cursor-pointer flex-1 text-base">
                       {option.label}
                     </Label>
                   </div>
@@ -160,17 +169,19 @@ const Quiz = () => {
               </RadioGroup>
             </div>
 
-            <div className="flex justify-between pt-4">
+            <div className="flex justify-between pt-4 gap-4">
               <Button
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={currentQuestion === 0}
+                className="hover:scale-105 transition-transform"
               >
                 Previous
               </Button>
               <Button
                 onClick={handleNext}
                 disabled={!answers[questions[currentQuestion].id] || loading}
+                className="hover:scale-105 transition-transform hover-glow"
               >
                 {loading ? (
                   <>
@@ -178,9 +189,9 @@ const Quiz = () => {
                     Processing...
                   </>
                 ) : currentQuestion === questions.length - 1 ? (
-                  "Submit"
+                  "Submit Quiz"
                 ) : (
-                  "Next"
+                  "Next Question"
                 )}
               </Button>
             </div>

@@ -99,39 +99,44 @@ export default function QuizResults() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid-pattern">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Your Career Assessment Results</h1>
-            <p className="text-muted-foreground">
+          <div className="mb-8 animate-slide-up">
+            <h1 className="text-5xl font-bold mb-3 bg-gradient-primary bg-clip-text text-transparent">
+              Your Career Assessment Results
+            </h1>
+            <p className="text-lg text-muted-foreground">
               Based on your responses, here are your personalized career recommendations
             </p>
           </div>
 
           {results && (
             <>
-              <Card className="mb-8">
+              <Card className="mb-8 shadow-glow animate-fade-in hover-lift">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <TrendingUp className="h-6 w-6 text-primary" />
                     Your Aptitude Scores
                   </CardTitle>
                   <CardDescription>Areas where you excel</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {Object.entries(results.scores).map(([category, score]) => (
-                      <div key={category} className="space-y-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    {Object.entries(results.scores).map(([category, score], idx) => (
+                      <div key={category} className="space-y-2 animate-slide-up" style={{animationDelay: `${idx * 0.1}s`}}>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium capitalize">{category}</span>
-                          <span className="text-sm text-muted-foreground">{String(score)}%</span>
+                          <span className="text-base font-semibold capitalize">{category}</span>
+                          <span className="text-sm text-muted-foreground font-medium">{String(score)}%</span>
                         </div>
-                        <div className="w-full bg-secondary rounded-full h-2">
+                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                           <div
-                            className="bg-primary h-2 rounded-full transition-all"
-                            style={{ width: `${score}%` }}
+                            className="h-3 rounded-full transition-all duration-1000 ease-out"
+                            style={{ 
+                              width: `${score}%`,
+                              background: 'var(--gradient-primary)'
+                            }}
                           />
                         </div>
                       </div>
@@ -140,44 +145,51 @@ export default function QuizResults() {
                 </CardContent>
               </Card>
 
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <Briefcase className="h-6 w-6" />
+              <div className="mb-6 animate-slide-in-left" style={{animationDelay: '0.2s'}}>
+                <h2 className="text-3xl font-bold mb-4 flex items-center gap-3">
+                  <Briefcase className="h-7 w-7 text-primary" />
                   Recommended Careers
                 </h2>
               </div>
 
               {careers.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2">
-                  {careers.map((career) => (
-                    <Card key={career.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      <div className="h-48 overflow-hidden">
+                  {careers.map((career, idx) => (
+                    <Card 
+                      key={career.id} 
+                      className="overflow-hidden shadow-glow hover-lift animate-fade-in border-2 border-transparent hover:border-primary transition-all"
+                      style={{animationDelay: `${idx * 0.15}s`}}
+                    >
+                      <div className="h-52 overflow-hidden relative">
                         <img
                           src={career.image_url}
                           alt={career.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       </div>
                       <CardHeader>
-                        <CardTitle>{career.name}</CardTitle>
-                        <CardDescription className="line-clamp-2">
+                        <CardTitle className="text-2xl">{career.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-base">
                           {career.description}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div>
-                          <p className="text-sm font-medium mb-1">Average Salary</p>
-                          <Badge variant="secondary">{career.average_salary}</Badge>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium mb-1">Growth Rate</p>
-                          <Badge variant="secondary">{career.growth_rate}</Badge>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium mb-2 text-muted-foreground">Average Salary</p>
+                            <Badge variant="secondary" className="text-sm px-3 py-1">{career.average_salary}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium mb-2 text-muted-foreground">Growth Rate</p>
+                            <Badge variant="secondary" className="text-sm px-3 py-1">{career.growth_rate}</Badge>
+                          </div>
                         </div>
                         <div>
                           <p className="text-sm font-medium mb-2">Required Skills</p>
                           <div className="flex flex-wrap gap-2">
-                            {career.required_skills.slice(0, 3).map((skill, idx) => (
-                              <Badge key={idx} variant="outline">
+                            {career.required_skills.slice(0, 3).map((skill, skillIdx) => (
+                              <Badge key={skillIdx} variant="outline" className="hover:bg-primary hover:text-primary-foreground transition-colors">
                                 {skill}
                               </Badge>
                             ))}
@@ -185,7 +197,7 @@ export default function QuizResults() {
                         </div>
                         <Button
                           onClick={() => navigate("/careers")}
-                          className="w-full"
+                          className="w-full hover:scale-105 transition-transform hover-glow"
                         >
                           <BookOpen className="mr-2 h-4 w-4" />
                           Explore Career Details
@@ -195,23 +207,32 @@ export default function QuizResults() {
                   ))}
                 </div>
               ) : (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">
+                <Card className="animate-fade-in shadow-glow">
+                  <CardContent className="py-16 text-center">
+                    <p className="text-lg text-muted-foreground mb-4">
                       No matching careers found. Please try taking the quiz again.
                     </p>
-                    <Button onClick={() => navigate("/quiz")} className="mt-4">
+                    <Button onClick={() => navigate("/quiz")} className="mt-4 hover:scale-105 transition-transform hover-glow">
                       Retake Quiz
                     </Button>
                   </CardContent>
                 </Card>
               )}
 
-              <div className="mt-8 flex justify-center gap-4">
-                <Button onClick={() => navigate("/mentors")} size="lg">
+              <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4 animate-fade-in" style={{animationDelay: '0.5s'}}>
+                <Button 
+                  onClick={() => navigate("/mentors")} 
+                  size="lg"
+                  className="hover:scale-105 transition-transform hover-glow"
+                >
                   Find a Mentor
                 </Button>
-                <Button onClick={() => navigate("/quiz")} variant="outline" size="lg">
+                <Button 
+                  onClick={() => navigate("/quiz")} 
+                  variant="outline" 
+                  size="lg"
+                  className="hover:scale-105 transition-transform"
+                >
                   Retake Assessment
                 </Button>
               </div>

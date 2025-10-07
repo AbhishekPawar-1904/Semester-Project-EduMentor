@@ -163,96 +163,104 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid-pattern">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-8 flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
+          <div className="mb-8 flex items-center gap-4 animate-slide-up">
+            <div className="p-3 rounded-2xl bg-gradient-primary shadow-glow animate-bounce-in">
+              <Shield className="h-10 w-10 text-primary-foreground" />
+            </div>
             <div>
-              <h1 className="text-4xl font-bold">Admin Panel</h1>
-              <p className="text-muted-foreground">Manage mentors, users, and platform content</p>
+              <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Admin Panel
+              </h1>
+              <p className="text-lg text-muted-foreground">Manage mentors, users, and platform content</p>
             </div>
           </div>
 
-          <Tabs defaultValue="mentors" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="mentors">
+          <Tabs defaultValue="mentors" className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
+            <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-grid">
+              <TabsTrigger value="mentors" className="transition-all">
                 <UserCheck className="mr-2 h-4 w-4" />
                 Pending Mentors
               </TabsTrigger>
-              <TabsTrigger value="appointments">
+              <TabsTrigger value="appointments" className="transition-all">
                 <Calendar className="mr-2 h-4 w-4" />
                 Appointments
               </TabsTrigger>
-              <TabsTrigger value="users">
+              <TabsTrigger value="users" className="transition-all">
                 <Users className="mr-2 h-4 w-4" />
                 Users
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="mentors" className="space-y-4">
-              <Card>
+              <Card className="shadow-glow animate-fade-in">
                 <CardHeader>
-                  <CardTitle>Mentor Applications</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-2xl">Mentor Applications</CardTitle>
+                  <CardDescription className="text-base">
                     Review and approve mentor applications
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {pendingMentors.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
+                    <p className="text-center text-muted-foreground py-12 text-lg">
                       No pending mentor applications
                     </p>
                   ) : (
                     <div className="space-y-4">
-                      {pendingMentors.map((mentor) => (
-                        <Card key={mentor.id}>
+                      {pendingMentors.map((mentor, idx) => (
+                        <Card 
+                          key={mentor.id} 
+                          className="hover-lift animate-slide-in-left border-2 border-transparent hover:border-primary transition-all"
+                          style={{animationDelay: `${idx * 0.1}s`}}
+                        >
                           <CardHeader>
                             <div className="flex items-start justify-between">
                               <div>
-                                <CardTitle>{mentor.profiles.full_name}</CardTitle>
-                                <CardDescription>{mentor.profiles.email}</CardDescription>
+                                <CardTitle className="text-xl">{mentor.profiles.full_name}</CardTitle>
+                                <CardDescription className="text-base">{mentor.profiles.email}</CardDescription>
                               </div>
-                              <Badge variant="secondary">{mentor.status}</Badge>
+                              <Badge variant="secondary" className="capitalize px-3 py-1">{mentor.status}</Badge>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            <div>
-                              <p className="text-sm font-medium mb-1">Company</p>
-                              <p className="text-sm text-muted-foreground">{mentor.company}</p>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Company</p>
+                                <p className="text-base">{mentor.company}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Experience</p>
+                                <p className="text-base">{mentor.experience_years} years</p>
+                              </div>
                             </div>
                             <div>
-                              <p className="text-sm font-medium mb-1">Experience</p>
-                              <p className="text-sm text-muted-foreground">
-                                {mentor.experience_years} years
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium mb-2">Expertise</p>
+                              <p className="text-sm font-semibold mb-2 text-muted-foreground">Expertise</p>
                               <div className="flex flex-wrap gap-2">
                                 {mentor.expertise.map((skill, idx) => (
-                                  <Badge key={idx} variant="outline">
+                                  <Badge key={idx} variant="outline" className="hover:bg-primary hover:text-primary-foreground transition-colors">
                                     {skill}
                                   </Badge>
                                 ))}
                               </div>
                             </div>
                             <div>
-                              <p className="text-sm font-medium mb-1">Bio</p>
-                              <p className="text-sm text-muted-foreground">{mentor.bio}</p>
+                              <p className="text-sm font-semibold mb-1 text-muted-foreground">Bio</p>
+                              <p className="text-base text-muted-foreground">{mentor.bio}</p>
                             </div>
-                            <div className="flex gap-2 pt-2">
+                            <div className="flex gap-3 pt-2">
                               <Button
                                 onClick={() => handleMentorApproval(mentor.id, "approved")}
-                                className="flex-1"
+                                className="flex-1 hover:scale-105 transition-transform hover-glow"
                               >
                                 Approve
                               </Button>
                               <Button
                                 onClick={() => handleMentorApproval(mentor.id, "rejected")}
                                 variant="destructive"
-                                className="flex-1"
+                                className="flex-1 hover:scale-105 transition-transform"
                               >
                                 Reject
                               </Button>
@@ -267,25 +275,26 @@ export default function AdminPanel() {
             </TabsContent>
 
             <TabsContent value="appointments" className="space-y-4">
-              <Card>
+              <Card className="shadow-glow animate-fade-in">
                 <CardHeader>
-                  <CardTitle>Recent Appointments</CardTitle>
-                  <CardDescription>Latest mentorship session bookings</CardDescription>
+                  <CardTitle className="text-2xl">Recent Appointments</CardTitle>
+                  <CardDescription className="text-base">Latest mentorship session bookings</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {appointments.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
+                    <p className="text-center text-muted-foreground py-12 text-lg">
                       No appointments found
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {appointments.map((appointment) => (
+                      {appointments.map((appointment, idx) => (
                         <div
                           key={appointment.id}
-                          className="flex items-center justify-between p-4 border rounded-lg"
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-2 rounded-lg hover-lift hover:border-primary transition-all animate-slide-in-right"
+                          style={{animationDelay: `${idx * 0.1}s`}}
                         >
-                          <div className="space-y-1">
-                            <p className="font-medium">
+                          <div className="space-y-1 mb-3 sm:mb-0">
+                            <p className="font-semibold text-base">
                               {appointment.student.full_name} → {appointment.mentor.full_name}
                             </p>
                             <p className="text-sm text-muted-foreground">
@@ -293,6 +302,7 @@ export default function AdminPanel() {
                             </p>
                           </div>
                           <Badge
+                            className="capitalize px-3 py-1"
                             variant={
                               appointment.status === "completed"
                                 ? "default"
@@ -312,13 +322,13 @@ export default function AdminPanel() {
             </TabsContent>
 
             <TabsContent value="users">
-              <Card>
+              <Card className="shadow-glow animate-fade-in">
                 <CardHeader>
-                  <CardTitle>User Management</CardTitle>
-                  <CardDescription>View and manage platform users</CardDescription>
+                  <CardTitle className="text-2xl">User Management</CardTitle>
+                  <CardDescription className="text-base">View and manage platform users</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center text-muted-foreground py-8">
+                  <p className="text-center text-muted-foreground py-12 text-lg">
                     User management features coming soon
                   </p>
                 </CardContent>
