@@ -1,10 +1,15 @@
-import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+
+import Navbar from "@/components/Navbar";
 import { GraduationCap, Users, BookOpen, Award, TrendingUp, Sparkles, ArrowRight, Zap, Target, Brain } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Index() {
+  const navigate = useNavigate();
+  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -135,14 +140,13 @@ export default function Index() {
           <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
             Join thousands of students who have found their path to success
           </p>
-          <Link to="/auth">
-            <Button size="lg" variant="secondary" className="gap-2 hover-lift hover:scale-105">
-              Create Your Free Account
-              <GraduationCap className="h-5 w-5" />
-            </Button>
-          </Link>
+          <Button size="lg" variant="secondary" className="gap-2 hover-lift hover:scale-105" onClick={() => navigate("/auth")}>
+            Create Your Free Account
+            <GraduationCap className="h-5 w-5" />
+          </Button>
         </div>
       </section>
+      <Footer />
     </div>
   );
 }

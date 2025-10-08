@@ -10,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isMentor: boolean;
   isStudent: boolean;
+  profile: any;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isMentor: false,
   isStudent: false,
+  profile: null,
 });
 
 export const useAuth = () => {
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     // Set up auth state listener
@@ -43,13 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch user role when session changes
+        // Fetch user role and profile when session changes
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
+            fetchUserProfile(session.user.id);
           }, 0);
         } else {
           setUserRole(null);
+          setProfile(null);
         }
         
         setLoading(false);
@@ -63,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.user) {
         fetchUserRole(session.user.id);
+        fetchUserProfile(session.user.id);
       }
       
       setLoading(false);
@@ -89,12 +95,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      setProfile(null);
+    }
+  };
+
   const isAdmin = userRole === "admin";
   const isMentor = userRole === "mentor";
   const isStudent = userRole === "student";
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isMentor, isStudent }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isMentor, isStudent, profile }}>
       {children}
     </AuthContext.Provider>
   );
