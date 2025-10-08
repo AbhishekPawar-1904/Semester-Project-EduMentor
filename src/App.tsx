@@ -14,6 +14,7 @@ import QuizResults from "./pages/QuizResults";
 import AdminPanel from "./pages/AdminPanel";
 import Scholarships from "./pages/Scholarships";
 import Colleges from "./pages/Colleges";
+import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/scholarships" element={<Scholarships />} />
             <Route path="/colleges" element={<Colleges />} />
+            <Route path="/resources" element={<Resources />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
