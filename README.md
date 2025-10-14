@@ -51,7 +51,7 @@ The system is built on a relational database schema in Supabase with the followi
 
 -   [x] **Foundation & Authentication:** User registration and login system is complete.
 -   [x] **Database Schema:** Core tables and security policies (RLS) are implemented in Supabase.
--   [X] **Aptitude Quiz & Recommendation Engine:** In progress.
+-   [X] **Aptitude Quiz & Recommendation Engine:** 
 -   [X] **Student & Mentor Dashboards:** UI to be connected with real backend data.
--   [ ] **Session Booking System:** To be implemented.
+-   [ ] **Session Booking System:** In progress.
 -   [ ] **Admin Panel:** To be developed.
