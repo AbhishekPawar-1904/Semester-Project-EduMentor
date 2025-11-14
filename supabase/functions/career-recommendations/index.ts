@@ -11,29 +11,52 @@ serve(async (req) => {
   }
 
   try {
-    const { answers, skillScores } = await req.json();
+    const { answers, skillScores, streamScores } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+    
+    // Prepare detailed prompt for AI with stream information
+    const topStreams = Object.entries(streamScores || {})
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([stream]) => stream);
+    
+    const topSkills = Object.entries(skillScores || {})
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 6)
+      .map(([skill]) => skill);
 
-    // Prepare prompt for AI
-    const prompt = `Based on the following career assessment results, recommend 3-5 suitable career paths.
+    const prompt = `You are an expert career counselor for Indian students. Based on the assessment results below, recommend 3-5 career paths suitable for government degree college students.
 
-Skill Scores: ${JSON.stringify(skillScores, null, 2)}
-User Answers: ${JSON.stringify(answers, null, 2)}
+TOP RECOMMENDED STREAMS: ${topStreams.join(', ')}
+TOP SKILLS: ${topSkills.join(', ')}
 
-For each recommended career, provide:
-1. Career name
-2. Why it's a good match (2-3 sentences)
-3. Key skills required
-4. Average salary range
-5. Education requirements
+STREAM SCORES (out of 100): ${JSON.stringify(streamScores, null, 2)}
+SKILL SCORES (out of 100): ${JSON.stringify(skillScores, null, 2)}
 
-Format the response as a JSON array of career recommendations.`;
+For each career recommendation, provide ONLY a valid JSON array with this exact structure:
+[
+  {
+    "name": "Career Name",
+    "match_reason": "2-3 sentences explaining why this career matches their skills and interests",
+    "required_skills": ["skill1", "skill2", "skill3"],
+    "salary_range": "₹X,XX,XXX - ₹XX,XX,XXX per year",
+    "education": "Specific degree requirements (e.g., B.Sc. in Computer Science, B.Com, B.A. in Psychology)"
+  }
+]
 
-    console.log('Calling AI with prompt:', prompt);
+IMPORTANT:
+- Focus on careers accessible through government colleges in India
+- Match careers to their top streams (${topStreams.join(', ')})
+- Consider both traditional and emerging career options
+- Provide realistic salary ranges in Indian Rupees
+- Mention specific government exams or certifications if relevant
+- Return ONLY the JSON array, no additional text`;
+
+    console.log('Calling AI with prompt for streams:', topStreams);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -46,13 +69,14 @@ Format the response as a JSON array of career recommendations.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert career counselor. Provide thoughtful, personalized career recommendations based on student assessments.'
+            content: 'You are an expert Indian career counselor specializing in government college education pathways. Provide career recommendations in valid JSON format only, with no additional text or markdown.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
+        temperature: 0.7,
       }),
     });
 
@@ -79,34 +103,70 @@ Format the response as a JSON array of career recommendations.`;
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
 
-    console.log('AI response:', aiResponse);
+    console.log('AI response received:', aiResponse.substring(0, 200) + '...');
 
     // Parse AI response and extract recommendations
     let recommendations;
     try {
-      // Try to extract JSON from the response
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      // Remove markdown code blocks if present
+      let cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      // Try to extract JSON array from the response
+      const jsonMatch = cleanResponse.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         recommendations = JSON.parse(jsonMatch[0]);
+        console.log('Successfully parsed', recommendations.length, 'career recommendations');
       } else {
-        // Fallback: create structured recommendations from text
-        recommendations = [{
-          name: "Data Analyst",
-          match_reason: "Based on your analytical skills and problem-solving abilities.",
-          required_skills: ["Data Analysis", "Statistics", "SQL"],
-          salary_range: "$60,000 - $90,000",
-          education: "Bachelor's degree in related field"
-        }];
+        throw new Error('No JSON array found in response');
       }
+      
+      // Validate recommendations structure
+      if (!Array.isArray(recommendations) || recommendations.length === 0) {
+        throw new Error('Invalid recommendations format');
+      }
+      
+      // Ensure each recommendation has required fields
+      recommendations = recommendations.map(rec => ({
+        name: rec.name || 'Career Option',
+        match_reason: rec.match_reason || 'Matches your profile',
+        required_skills: Array.isArray(rec.required_skills) ? rec.required_skills : ['General Skills'],
+        salary_range: rec.salary_range || 'Varies',
+        education: rec.education || 'Bachelor\'s degree'
+      }));
+      
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      recommendations = [{
-        name: "General Career Guidance",
-        match_reason: "We recommend exploring various career options based on your skills.",
-        required_skills: ["Communication", "Problem Solving"],
-        salary_range: "Varies by field",
-        education: "Varies by career"
-      }];
+      console.error('Raw response:', aiResponse);
+      
+      // Fallback: create stream-based recommendations
+      const streamBased: any = {
+        science: {
+          name: "Software Developer / Engineer",
+          match_reason: "Your analytical and technical skills align perfectly with software development. This career offers growth in emerging technologies.",
+          required_skills: ["Programming", "Problem Solving", "Logical Thinking"],
+          salary_range: "₹3,00,000 - ₹12,00,000 per year",
+          education: "B.Sc. in Computer Science or B.Tech"
+        },
+        commerce: {
+          name: "Chartered Accountant / Financial Analyst",
+          match_reason: "Your business acumen and financial skills make you suitable for accounting and finance careers with excellent growth prospects.",
+          required_skills: ["Accounting", "Financial Analysis", "Attention to Detail"],
+          salary_range: "₹4,00,000 - ₹15,00,000 per year",
+          education: "B.Com with CA or CMA certification"
+        },
+        arts: {
+          name: "Content Writer / Digital Marketing Specialist",
+          match_reason: "Your creative and communication skills are valuable in modern digital industries with diverse opportunities.",
+          required_skills: ["Writing", "Communication", "Creativity"],
+          salary_range: "₹2,50,000 - ₹8,00,000 per year",
+          education: "B.A. in English, Mass Communication, or related field"
+        }
+      };
+      
+      recommendations = Object.keys(streamScores || {})
+        .sort((a, b) => (streamScores[b] || 0) - (streamScores[a] || 0))
+        .slice(0, 3)
+        .map(stream => streamBased[stream] || streamBased.science);
     }
 
     return new Response(
