@@ -26,12 +26,18 @@ const Dashboard = () => {
   }, [user]);
 
   const loadProfile = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user?.id)
-      .single();
-    setProfile(data);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user?.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Error loading profile:", error);
+    }
   };
 
   if (loading) {
