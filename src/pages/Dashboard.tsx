@@ -6,24 +6,21 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, Calendar, BookOpen, Award } from "lucide-react";
+import { Brain, Calendar, BookOpen, Award, Loader2 } from "lucide-react";
+import MentorDashboard from "./MentorDashboard";
 
 const Dashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, isMentor } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (user) {
+    } else if (user) {
       loadProfile();
     }
-  }, [user]);
+  }, [user, loading, navigate]);
 
   const loadProfile = async () => {
     try {
@@ -41,7 +38,21 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Redirect to appropriate dashboard based on role
+  if (isMentor) {
+    return <MentorDashboard />;
+  }
+
+  if (isAdmin) {
+    navigate("/admin");
+    return null;
   }
 
   return (
