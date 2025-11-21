@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Brain, Calendar, BookOpen, Award, Loader2 } from "lucide-react";
-import MentorDashboard from "./MentorDashboard";
-
 const Dashboard = () => {
   const { user, loading, isAdmin, isMentor } = useAuth();
   const navigate = useNavigate();
@@ -47,7 +45,8 @@ const Dashboard = () => {
 
   // Redirect to appropriate dashboard based on role
   if (isMentor) {
-    return <MentorDashboard />;
+    navigate("/mentor-dashboard");
+    return null;
   }
 
   if (isAdmin) {
