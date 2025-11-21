@@ -14,6 +14,8 @@ interface MentorProfile {
   user_id: string;
   bio: string;
   company: string;
+  education: string;
+  hourly_rate: number;
   expertise: string[];
   experience_years: number;
   status: string;
@@ -125,12 +127,40 @@ export default function AdminPanel() {
 
   const handleMentorApproval = async (mentorId: string, status: "approved" | "rejected") => {
     try {
-      const { error } = await supabase
+      // Find the mentor to get user_id
+      const mentor = pendingMentors.find(m => m.id === mentorId);
+      if (!mentor) throw new Error("Mentor not found");
+
+      // Update mentor profile status
+      const { error: mentorError } = await supabase
         .from("mentor_profiles")
         .update({ status })
         .eq("id", mentorId);
 
-      if (error) throw error;
+      if (mentorError) throw mentorError;
+
+      // If approved, add mentor role and update profile
+      if (status === "approved") {
+        // Add mentor role to user_roles
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .upsert({
+            user_id: mentor.user_id,
+            role: "mentor"
+          }, {
+            onConflict: "user_id,role"
+          });
+
+        if (roleError) throw roleError;
+
+        // Update profile role
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ role: "mentor" })
+          .eq("id", mentor.user_id);
+
+        if (profileError) throw profileError;
+      }
 
       toast({
         title: "Success",
@@ -234,6 +264,16 @@ export default function AdminPanel() {
                               <div>
                                 <p className="text-sm font-semibold mb-1 text-muted-foreground">Experience</p>
                                 <p className="text-base">{mentor.experience_years} years</p>
+                              </div>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Education</p>
+                                <p className="text-base">{mentor.education}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Hourly Rate</p>
+                                <p className="text-base">${mentor.hourly_rate}/hour</p>
                               </div>
                             </div>
                             <div>
