@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Users, UserCheck, Calendar, Shield } from "lucide-react";
+import { Loader2, UserCheck, Calendar, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
 
@@ -210,7 +210,7 @@ export default function AdminPanel() {
           </div>
 
           <Tabs defaultValue="mentors" className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
-            <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-grid">
+            <TabsList className="grid grid-cols-2 w-full md:w-auto md:inline-grid">
               <TabsTrigger value="mentors" className="transition-all">
                 <UserCheck className="mr-2 h-4 w-4" />
                 Pending Mentors
@@ -218,10 +218,6 @@ export default function AdminPanel() {
               <TabsTrigger value="appointments" className="transition-all">
                 <Calendar className="mr-2 h-4 w-4" />
                 Appointments
-              </TabsTrigger>
-              <TabsTrigger value="users" className="transition-all">
-                <Users className="mr-2 h-4 w-4" />
-                Users
               </TabsTrigger>
             </TabsList>
 
@@ -361,19 +357,6 @@ export default function AdminPanel() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="users">
-              <Card className="shadow-glow animate-fade-in">
-                <CardHeader>
-                  <CardTitle className="text-2xl">User Management</CardTitle>
-                  <CardDescription className="text-base">View and manage platform users</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-center text-muted-foreground py-12 text-lg">
-                    User management features coming soon
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       </main>

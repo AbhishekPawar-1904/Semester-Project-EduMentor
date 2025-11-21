@@ -16,7 +16,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"student" | "mentor" | "admin">("student");
+  const [role, setRole] = useState<"student" | "mentor">("student");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -171,7 +171,7 @@ const Auth = () => {
                 </div>
                 <div className="space-y-3 animate-slide-up" style={{animationDelay: '0.4s'}}>
                   <Label className="text-sm font-medium">I am a...</Label>
-                  <RadioGroup value={role} onValueChange={(v) => setRole(v as "student" | "mentor" | "admin")}>
+                  <RadioGroup value={role} onValueChange={(v) => setRole(v as "student" | "mentor")}>
                     <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/5 transition-all cursor-pointer">
                       <RadioGroupItem value="student" id="student" />
                       <Label htmlFor="student" className="cursor-pointer flex-1">Student</Label>
@@ -179,10 +179,6 @@ const Auth = () => {
                     <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/5 transition-all cursor-pointer">
                       <RadioGroupItem value="mentor" id="mentor" />
                       <Label htmlFor="mentor" className="cursor-pointer flex-1">Mentor (Apply)</Label>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/5 transition-all cursor-pointer">
-                      <RadioGroupItem value="admin" id="admin" />
-                      <Label htmlFor="admin" className="cursor-pointer flex-1">Admin</Label>
                     </div>
                   </RadioGroup>
                 </div>
