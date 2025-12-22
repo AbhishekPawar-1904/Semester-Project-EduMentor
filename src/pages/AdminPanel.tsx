@@ -5,9 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserCheck, Calendar, Shield } from "lucide-react";
+import { Loader2, UserCheck, Calendar, Shield, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
+
+interface UserWithRoles {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  roles: string[];
+}
 
 interface MentorProfile {
   id: string;
@@ -46,6 +54,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [pendingMentors, setPendingMentors] = useState<MentorProfile[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -116,6 +125,30 @@ export default function AdminPanel() {
 
       if (appointmentsError) throw appointmentsError;
       setAppointments(appointmentsData || []);
+
+      // Fetch all users with their roles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, created_at")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) throw rolesError;
+
+      // Map roles to users
+      const usersWithRoles: UserWithRoles[] = (profilesData || []).map(profile => ({
+        ...profile,
+        roles: (rolesData || [])
+          .filter(r => r.user_id === profile.id)
+          .map(r => r.role)
+      }));
+
+      setUsers(usersWithRoles);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -210,7 +243,7 @@ export default function AdminPanel() {
           </div>
 
           <Tabs defaultValue="mentors" className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
-            <TabsList className="grid grid-cols-2 w-full md:w-auto md:inline-grid">
+            <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-grid">
               <TabsTrigger value="mentors" className="transition-all">
                 <UserCheck className="mr-2 h-4 w-4" />
                 Pending Mentors
@@ -218,6 +251,10 @@ export default function AdminPanel() {
               <TabsTrigger value="appointments" className="transition-all">
                 <Calendar className="mr-2 h-4 w-4" />
                 Appointments
+              </TabsTrigger>
+              <TabsTrigger value="users" className="transition-all">
+                <Users className="mr-2 h-4 w-4" />
+                Users
               </TabsTrigger>
             </TabsList>
 
@@ -349,6 +386,67 @@ export default function AdminPanel() {
                           >
                             {appointment.status}
                           </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="users" className="space-y-4">
+              <Card className="shadow-glow animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="text-2xl">All Users</CardTitle>
+                  <CardDescription className="text-base">
+                    View all registered users with their roles
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {users.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12 text-lg">
+                      No users found
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {users.map((user, idx) => (
+                        <div
+                          key={user.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-2 rounded-lg hover-lift hover:border-primary transition-all animate-slide-in-right"
+                          style={{animationDelay: `${idx * 0.05}s`}}
+                        >
+                          <div className="space-y-1 mb-3 sm:mb-0">
+                            <p className="font-semibold text-base">
+                              {user.full_name || "No name"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {user.email}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Registered: {new Date(user.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {user.roles.length === 0 ? (
+                              <Badge variant="outline">No roles</Badge>
+                            ) : (
+                              user.roles.map((role, roleIdx) => (
+                                <Badge
+                                  key={roleIdx}
+                                  className="capitalize"
+                                  variant={
+                                    role === "admin"
+                                      ? "destructive"
+                                      : role === "mentor"
+                                      ? "default"
+                                      : "secondary"
+                                  }
+                                >
+                                  {role}
+                                </Badge>
+                              ))
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
