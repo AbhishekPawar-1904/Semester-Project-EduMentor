@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserCheck, Calendar, Shield, Users } from "lucide-react";
+import { Loader2, UserCheck, Calendar, Shield, Users, Plus, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/hooks/use-toast";
+import { Database } from "@/integrations/supabase/types";
 
 interface UserWithRoles {
   id: string;
@@ -49,12 +50,17 @@ interface Appointment {
   };
 }
 
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+const ALL_ROLES: AppRole[] = ["student", "mentor", "admin"];
+
 export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingMentors, setPendingMentors] = useState<MentorProfile[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,6 +75,8 @@ export default function AdminPanel() {
         navigate("/auth");
         return;
       }
+
+      setCurrentUserId(user.id);
 
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
@@ -198,6 +206,64 @@ export default function AdminPanel() {
       toast({
         title: "Success",
         description: `Mentor ${status} successfully.`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddRole = async (userId: string, role: AppRole) => {
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Role "${role}" added successfully.`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveRole = async (userId: string, role: AppRole) => {
+    // Prevent removing admin role from yourself
+    if (userId === currentUserId && role === "admin") {
+      toast({
+        title: "Cannot Remove",
+        description: "You cannot remove your own admin role.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", role);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Role "${role}" removed successfully.`,
       });
 
       fetchData();
@@ -399,7 +465,7 @@ export default function AdminPanel() {
                 <CardHeader>
                   <CardTitle className="text-2xl">All Users</CardTitle>
                   <CardDescription className="text-base">
-                    View all registered users with their roles
+                    Manage user roles and permissions
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -408,47 +474,88 @@ export default function AdminPanel() {
                       No users found
                     </p>
                   ) : (
-                    <div className="space-y-3">
-                      {users.map((user, idx) => (
-                        <div
-                          key={user.id}
-                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-2 rounded-lg hover-lift hover:border-primary transition-all animate-slide-in-right"
-                          style={{animationDelay: `${idx * 0.05}s`}}
-                        >
-                          <div className="space-y-1 mb-3 sm:mb-0">
-                            <p className="font-semibold text-base">
-                              {user.full_name || "No name"}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {user.email}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Registered: {new Date(user.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {user.roles.length === 0 ? (
-                              <Badge variant="outline">No roles</Badge>
-                            ) : (
-                              user.roles.map((role, roleIdx) => (
-                                <Badge
-                                  key={roleIdx}
-                                  className="capitalize"
-                                  variant={
-                                    role === "admin"
-                                      ? "destructive"
-                                      : role === "mentor"
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                >
-                                  {role}
-                                </Badge>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="space-y-4">
+                      {users.map((user, idx) => {
+                        const availableRoles = ALL_ROLES.filter(
+                          role => !user.roles.includes(role)
+                        );
+                        
+                        return (
+                          <Card
+                            key={user.id}
+                            className="hover-lift animate-slide-in-right border-2 border-transparent hover:border-primary transition-all"
+                            style={{animationDelay: `${idx * 0.05}s`}}
+                          >
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                  <p className="font-semibold text-lg">
+                                    {user.full_name || "No name"}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {user.email}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Registered: {new Date(user.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex flex-col gap-3">
+                                  {/* Current Roles */}
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Roles:</span>
+                                    {user.roles.length === 0 ? (
+                                      <Badge variant="outline">No roles</Badge>
+                                    ) : (
+                                      user.roles.map((role, roleIdx) => (
+                                        <Badge
+                                          key={roleIdx}
+                                          className="capitalize flex items-center gap-1 pr-1"
+                                          variant={
+                                            role === "admin"
+                                              ? "destructive"
+                                              : role === "mentor"
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                        >
+                                          {role}
+                                          <button
+                                            onClick={() => handleRemoveRole(user.id, role as AppRole)}
+                                            className="ml-1 hover:bg-background/20 rounded p-0.5 transition-colors"
+                                            title={`Remove ${role} role`}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </Badge>
+                                      ))
+                                    )}
+                                  </div>
+                                  
+                                  {/* Add Role Buttons */}
+                                  {availableRoles.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-sm text-muted-foreground">Add:</span>
+                                      {availableRoles.map((role) => (
+                                        <Button
+                                          key={role}
+                                          size="sm"
+                                          variant="outline"
+                                          className="capitalize h-7 text-xs"
+                                          onClick={() => handleAddRole(user.id, role)}
+                                        >
+                                          <Plus className="h-3 w-3 mr-1" />
+                                          {role}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
