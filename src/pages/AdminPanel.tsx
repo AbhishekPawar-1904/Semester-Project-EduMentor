@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserCheck, Calendar, Shield, Users, Plus, X } from "lucide-react";
+import { Loader2, UserCheck, Calendar, Shield, Users, Plus, X, Activity, GraduationCap, BookOpen } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import { format } from "date-fns";
 
 interface UserWithRoles {
   id: string;
@@ -28,6 +30,7 @@ interface MentorProfile {
   expertise: string[];
   experience_years: number;
   status: string;
+  created_at: string;
   profiles: {
     full_name: string;
     email: string;
@@ -38,8 +41,10 @@ interface Appointment {
   id: string;
   scheduled_at: string;
   status: string;
+  duration_minutes: number;
   student_id: string;
   mentor_id: string;
+  created_at: string;
   student: {
     full_name: string;
     email: string;
@@ -50,6 +55,25 @@ interface Appointment {
   };
 }
 
+interface StudentActivity {
+  id: string;
+  full_name: string;
+  email: string;
+  appointments_count: number;
+  quiz_count: number;
+  last_active: string;
+}
+
+interface MentorActivity {
+  id: string;
+  full_name: string;
+  email: string;
+  status: string;
+  appointments_count: number;
+  completed_sessions: number;
+  expertise: string[];
+}
+
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 const ALL_ROLES: AppRole[] = ["student", "mentor", "admin"];
@@ -58,8 +82,11 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingMentors, setPendingMentors] = useState<MentorProfile[]>([]);
+  const [allMentors, setAllMentors] = useState<MentorProfile[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [studentActivities, setStudentActivities] = useState<StudentActivity[]>([]);
+  const [mentorActivities, setMentorActivities] = useState<MentorActivity[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -113,14 +140,26 @@ export default function AdminPanel() {
 
   const fetchData = async () => {
     try {
-      const { data: mentorsData, error: mentorsError } = await supabase
+      // Fetch pending mentors
+      const { data: pendingMentorsData, error: pendingMentorsError } = await supabase
         .from("mentor_profiles")
         .select("*, profiles(full_name, email)")
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
 
-      if (mentorsError) throw mentorsError;
-      setPendingMentors(mentorsData || []);
+      if (pendingMentorsError) throw pendingMentorsError;
+      setPendingMentors(pendingMentorsData || []);
 
+      // Fetch all mentors
+      const { data: allMentorsData, error: allMentorsError } = await supabase
+        .from("mentor_profiles")
+        .select("*, profiles(full_name, email)")
+        .order("created_at", { ascending: false });
+
+      if (allMentorsError) throw allMentorsError;
+      setAllMentors(allMentorsData || []);
+
+      // Fetch all appointments
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
@@ -128,8 +167,7 @@ export default function AdminPanel() {
           student:profiles!appointments_student_id_fkey(full_name, email),
           mentor:profiles!appointments_mentor_id_fkey(full_name, email)
         `)
-        .order("scheduled_at", { ascending: false })
-        .limit(10);
+        .order("scheduled_at", { ascending: false });
 
       if (appointmentsError) throw appointmentsError;
       setAppointments(appointmentsData || []);
@@ -157,6 +195,52 @@ export default function AdminPanel() {
       }));
 
       setUsers(usersWithRoles);
+
+      // Fetch student activities
+      const { data: quizData, error: quizError } = await supabase
+        .from("quiz_results")
+        .select("student_id, created_at");
+
+      if (quizError) throw quizError;
+
+      // Build student activity data
+      const studentRoleUsers = usersWithRoles.filter(u => u.roles.includes("student"));
+      const studentActivityData: StudentActivity[] = studentRoleUsers.map(student => {
+        const studentAppointments = (appointmentsData || []).filter(a => a.student_id === student.id);
+        const studentQuizzes = (quizData || []).filter(q => q.student_id === student.id);
+        const lastAppointment = studentAppointments[0]?.scheduled_at;
+        const lastQuiz = studentQuizzes[0]?.created_at;
+        
+        return {
+          id: student.id,
+          full_name: student.full_name || "Unknown",
+          email: student.email,
+          appointments_count: studentAppointments.length,
+          quiz_count: studentQuizzes.length,
+          last_active: lastAppointment || lastQuiz || student.created_at
+        };
+      });
+
+      setStudentActivities(studentActivityData);
+
+      // Build mentor activity data
+      const mentorActivityData: MentorActivity[] = (allMentorsData || []).map(mentor => {
+        const mentorAppointments = (appointmentsData || []).filter(a => a.mentor_id === mentor.user_id);
+        const completedSessions = mentorAppointments.filter(a => a.status === "completed").length;
+        
+        return {
+          id: mentor.user_id,
+          full_name: mentor.profiles.full_name,
+          email: mentor.profiles.email,
+          status: mentor.status,
+          appointments_count: mentorAppointments.length,
+          completed_sessions: completedSessions,
+          expertise: mentor.expertise || []
+        };
+      });
+
+      setMentorActivities(mentorActivityData);
+
     } catch (error: any) {
       toast({
         title: "Error",
@@ -168,11 +252,9 @@ export default function AdminPanel() {
 
   const handleMentorApproval = async (mentorId: string, status: "approved" | "rejected") => {
     try {
-      // Find the mentor to get user_id
       const mentor = pendingMentors.find(m => m.id === mentorId);
       if (!mentor) throw new Error("Mentor not found");
 
-      // Update mentor profile status
       const { error: mentorError } = await supabase
         .from("mentor_profiles")
         .update({ status })
@@ -180,9 +262,7 @@ export default function AdminPanel() {
 
       if (mentorError) throw mentorError;
 
-      // If approved, add mentor role and update profile
       if (status === "approved") {
-        // Add mentor role to user_roles
         const { error: roleError } = await supabase
           .from("user_roles")
           .upsert({
@@ -194,7 +274,6 @@ export default function AdminPanel() {
 
         if (roleError) throw roleError;
 
-        // Update profile role
         const { error: profileError } = await supabase
           .from("profiles")
           .update({ role: "mentor" })
@@ -242,7 +321,6 @@ export default function AdminPanel() {
   };
 
   const handleRemoveRole = async (userId: string, role: AppRole) => {
-    // Prevent removing admin role from yourself
     if (userId === currentUserId && role === "admin") {
       toast({
         title: "Cannot Remove",
@@ -276,6 +354,18 @@ export default function AdminPanel() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "default";
+      case "pending": return "secondary";
+      case "rejected": return "destructive";
+      case "completed": return "default";
+      case "accepted": return "secondary";
+      case "cancelled": return "destructive";
+      default: return "outline";
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -291,116 +381,161 @@ export default function AdminPanel() {
     return null;
   }
 
+  const stats = {
+    totalUsers: users.length,
+    totalMentors: allMentors.length,
+    pendingApplications: pendingMentors.length,
+    totalAppointments: appointments.length,
+    completedSessions: appointments.filter(a => a.status === "completed").length,
+  };
+
   return (
     <div className="min-h-screen bg-background bg-grid-pattern">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex items-center gap-4 animate-slide-up">
             <div className="p-3 rounded-2xl bg-gradient-primary shadow-glow animate-bounce-in">
               <Shield className="h-10 w-10 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Admin Panel
               </h1>
-              <p className="text-lg text-muted-foreground">Manage mentors, users, and platform content</p>
+              <p className="text-muted-foreground">Manage mentors, users, and platform activity</p>
             </div>
           </div>
 
-          <Tabs defaultValue="mentors" className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
-            <TabsList className="grid grid-cols-3 w-full md:w-auto md:inline-grid">
-              <TabsTrigger value="mentors" className="transition-all">
-                <UserCheck className="mr-2 h-4 w-4" />
-                Pending Mentors
+          {/* Stats Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <Card className="hover-lift">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Mentors</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalMentors}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-warning">{stats.pendingApplications}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Appointments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalAppointments}</div>
+              </CardContent>
+            </Card>
+            <Card className="hover-lift">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.completedSessions}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Tabs defaultValue="pending-mentors" className="space-y-6">
+            <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
+              <TabsTrigger value="pending-mentors" className="gap-2">
+                <UserCheck className="h-4 w-4" />
+                <span className="hidden md:inline">Pending Mentors</span>
+                <span className="md:hidden">Pending</span>
+                {pendingMentors.length > 0 && (
+                  <Badge variant="destructive" className="ml-1">{pendingMentors.length}</Badge>
+                )}
               </TabsTrigger>
-              <TabsTrigger value="appointments" className="transition-all">
-                <Calendar className="mr-2 h-4 w-4" />
-                Appointments
+              <TabsTrigger value="all-mentors" className="gap-2">
+                <GraduationCap className="h-4 w-4" />
+                <span className="hidden md:inline">All Mentors</span>
+                <span className="md:hidden">Mentors</span>
               </TabsTrigger>
-              <TabsTrigger value="users" className="transition-all">
-                <Users className="mr-2 h-4 w-4" />
+              <TabsTrigger value="student-activity" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden md:inline">Student Activity</span>
+                <span className="md:hidden">Students</span>
+              </TabsTrigger>
+              <TabsTrigger value="mentor-activity" className="gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="hidden md:inline">Mentor Activity</span>
+                <span className="md:hidden">Activity</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="h-4 w-4" />
                 Users
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="mentors" className="space-y-4">
-              <Card className="shadow-glow animate-fade-in">
+            {/* Pending Mentors Tab */}
+            <TabsContent value="pending-mentors">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">Mentor Applications</CardTitle>
-                  <CardDescription className="text-base">
-                    Review and approve mentor applications
-                  </CardDescription>
+                  <CardTitle>Pending Mentor Applications</CardTitle>
+                  <CardDescription>Review and approve or reject mentor applications</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {pendingMentors.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12 text-lg">
-                      No pending mentor applications
-                    </p>
+                    <p className="text-center text-muted-foreground py-12">No pending applications</p>
                   ) : (
                     <div className="space-y-4">
-                      {pendingMentors.map((mentor, idx) => (
-                        <Card 
-                          key={mentor.id} 
-                          className="hover-lift animate-slide-in-left border-2 border-transparent hover:border-primary transition-all"
-                          style={{animationDelay: `${idx * 0.1}s`}}
-                        >
+                      {pendingMentors.map((mentor) => (
+                        <Card key={mentor.id} className="border-2 hover:border-primary transition-all">
                           <CardHeader>
                             <div className="flex items-start justify-between">
                               <div>
-                                <CardTitle className="text-xl">{mentor.profiles.full_name}</CardTitle>
-                                <CardDescription className="text-base">{mentor.profiles.email}</CardDescription>
+                                <CardTitle>{mentor.profiles.full_name}</CardTitle>
+                                <CardDescription>{mentor.profiles.email}</CardDescription>
                               </div>
-                              <Badge variant="secondary" className="capitalize px-3 py-1">{mentor.status}</Badge>
+                              <Badge variant="secondary">Pending</Badge>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid md:grid-cols-3 gap-4">
                               <div>
-                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Company</p>
-                                <p className="text-base">{mentor.company}</p>
+                                <p className="text-sm text-muted-foreground">Company</p>
+                                <p className="font-medium">{mentor.company || "N/A"}</p>
                               </div>
                               <div>
-                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Experience</p>
-                                <p className="text-base">{mentor.experience_years} years</p>
-                              </div>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Education</p>
-                                <p className="text-base">{mentor.education}</p>
+                                <p className="text-sm text-muted-foreground">Experience</p>
+                                <p className="font-medium">{mentor.experience_years} years</p>
                               </div>
                               <div>
-                                <p className="text-sm font-semibold mb-1 text-muted-foreground">Hourly Rate</p>
-                                <p className="text-base">${mentor.hourly_rate}/hour</p>
+                                <p className="text-sm text-muted-foreground">Hourly Rate</p>
+                                <p className="font-medium">${mentor.hourly_rate}/hr</p>
                               </div>
                             </div>
                             <div>
-                              <p className="text-sm font-semibold mb-2 text-muted-foreground">Expertise</p>
+                              <p className="text-sm text-muted-foreground mb-2">Expertise</p>
                               <div className="flex flex-wrap gap-2">
-                                {mentor.expertise.map((skill, idx) => (
-                                  <Badge key={idx} variant="outline" className="hover:bg-primary hover:text-primary-foreground transition-colors">
-                                    {skill}
-                                  </Badge>
+                                {mentor.expertise?.map((skill, idx) => (
+                                  <Badge key={idx} variant="outline">{skill}</Badge>
                                 ))}
                               </div>
                             </div>
                             <div>
-                              <p className="text-sm font-semibold mb-1 text-muted-foreground">Bio</p>
-                              <p className="text-base text-muted-foreground">{mentor.bio}</p>
+                              <p className="text-sm text-muted-foreground">Bio</p>
+                              <p className="text-sm mt-1">{mentor.bio}</p>
                             </div>
                             <div className="flex gap-3 pt-2">
-                              <Button
-                                onClick={() => handleMentorApproval(mentor.id, "approved")}
-                                className="flex-1 hover:scale-105 transition-transform hover-glow"
-                              >
+                              <Button onClick={() => handleMentorApproval(mentor.id, "approved")} className="flex-1">
                                 Approve
                               </Button>
-                              <Button
-                                onClick={() => handleMentorApproval(mentor.id, "rejected")}
-                                variant="destructive"
-                                className="flex-1 hover:scale-105 transition-transform"
-                              >
+                              <Button onClick={() => handleMentorApproval(mentor.id, "rejected")} variant="destructive" className="flex-1">
                                 Reject
                               </Button>
                             </div>
@@ -413,45 +548,52 @@ export default function AdminPanel() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="appointments" className="space-y-4">
-              <Card className="shadow-glow animate-fade-in">
+            {/* All Mentors Tab */}
+            <TabsContent value="all-mentors">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">Recent Appointments</CardTitle>
-                  <CardDescription className="text-base">Latest mentorship session bookings</CardDescription>
+                  <CardTitle>All Mentors</CardTitle>
+                  <CardDescription>View and manage all mentors on the platform</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {appointments.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12 text-lg">
-                      No appointments found
-                    </p>
+                  {allMentors.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">No mentors found</p>
                   ) : (
                     <div className="space-y-3">
-                      {appointments.map((appointment, idx) => (
-                        <div
-                          key={appointment.id}
-                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-2 rounded-lg hover-lift hover:border-primary transition-all animate-slide-in-right"
-                          style={{animationDelay: `${idx * 0.1}s`}}
-                        >
-                          <div className="space-y-1 mb-3 sm:mb-0">
-                            <p className="font-semibold text-base">
-                              {appointment.student.full_name} → {appointment.mentor.full_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(appointment.scheduled_at).toLocaleString()}
-                            </p>
+                      {allMentors.map((mentor) => (
+                        <div key={mentor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                          <div className="flex-1">
+                            <h3 className="font-semibold">{mentor.profiles.full_name}</h3>
+                            <p className="text-sm text-muted-foreground">{mentor.profiles.email}</p>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              <span>{mentor.company || "No company"}</span>
+                              <span>{mentor.experience_years} years exp.</span>
+                              <span>${mentor.hourly_rate}/hr</span>
+                            </div>
                           </div>
-                          <Badge
-                            className="capitalize px-3 py-1"
-                            variant={
-                              appointment.status === "completed"
-                                ? "default"
-                                : appointment.status === "accepted"
-                                ? "secondary"
-                                : "outline"
-                            }
-                          >
-                            {appointment.status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getStatusColor(mentor.status)} className="capitalize">
+                              {mentor.status}
+                            </Badge>
+                            {mentor.status === "approved" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMentorApproval(mentor.id, "rejected")}
+                              >
+                                Revoke
+                              </Button>
+                            )}
+                            {mentor.status === "rejected" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMentorApproval(mentor.id, "approved")}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -460,100 +602,149 @@ export default function AdminPanel() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="users" className="space-y-4">
-              <Card className="shadow-glow animate-fade-in">
+            {/* Student Activity Tab */}
+            <TabsContent value="student-activity">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">All Users</CardTitle>
-                  <CardDescription className="text-base">
-                    Manage user roles and permissions
-                  </CardDescription>
+                  <CardTitle>Student Activity</CardTitle>
+                  <CardDescription>Monitor student engagement and activity</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {studentActivities.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">No students found</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {studentActivities.map((student) => (
+                        <div key={student.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                          <div className="flex-1">
+                            <h3 className="font-semibold">{student.full_name}</h3>
+                            <p className="text-sm text-muted-foreground">{student.email}</p>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-center">
+                              <p className="font-bold text-lg">{student.appointments_count}</p>
+                              <p className="text-muted-foreground">Sessions</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="font-bold text-lg">{student.quiz_count}</p>
+                              <p className="text-muted-foreground">Quizzes</p>
+                            </div>
+                            <div className="text-center min-w-[100px]">
+                              <p className="text-xs text-muted-foreground">Last Active</p>
+                              <p className="text-sm">{format(new Date(student.last_active), "MMM dd, yyyy")}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Mentor Activity Tab */}
+            <TabsContent value="mentor-activity">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mentor Activity</CardTitle>
+                  <CardDescription>Monitor mentor performance and engagement</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {mentorActivities.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">No mentors found</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {mentorActivities.map((mentor) => (
+                        <div key={mentor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{mentor.full_name}</h3>
+                              <Badge variant={getStatusColor(mentor.status)} className="capitalize">{mentor.status}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{mentor.email}</p>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {mentor.expertise.slice(0, 3).map((skill, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">{skill}</Badge>
+                              ))}
+                              {mentor.expertise.length > 3 && (
+                                <Badge variant="outline" className="text-xs">+{mentor.expertise.length - 3}</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-center">
+                              <p className="font-bold text-lg">{mentor.appointments_count}</p>
+                              <p className="text-muted-foreground">Total</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="font-bold text-lg text-green-600">{mentor.completed_sessions}</p>
+                              <p className="text-muted-foreground">Completed</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Users Tab */}
+            <TabsContent value="users">
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Users</CardTitle>
+                  <CardDescription>Manage user roles and permissions</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {users.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12 text-lg">
-                      No users found
-                    </p>
+                    <p className="text-center text-muted-foreground py-12">No users found</p>
                   ) : (
-                    <div className="space-y-4">
-                      {users.map((user, idx) => {
-                        const availableRoles = ALL_ROLES.filter(
-                          role => !user.roles.includes(role)
-                        );
+                    <div className="space-y-3">
+                      {users.map((user) => {
+                        const availableRoles = ALL_ROLES.filter(role => !user.roles.includes(role));
                         
                         return (
-                          <Card
-                            key={user.id}
-                            className="hover-lift animate-slide-in-right border-2 border-transparent hover:border-primary transition-all"
-                            style={{animationDelay: `${idx * 0.05}s`}}
-                          >
-                            <CardContent className="pt-6">
-                              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                  <p className="font-semibold text-lg">
-                                    {user.full_name || "No name"}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {user.email}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Registered: {new Date(user.created_at).toLocaleDateString()}
-                                  </p>
-                                </div>
-                                
-                                <div className="flex flex-col gap-3">
-                                  {/* Current Roles */}
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">Roles:</span>
-                                    {user.roles.length === 0 ? (
-                                      <Badge variant="outline">No roles</Badge>
-                                    ) : (
-                                      user.roles.map((role, roleIdx) => (
-                                        <Badge
-                                          key={roleIdx}
-                                          className="capitalize flex items-center gap-1 pr-1"
-                                          variant={
-                                            role === "admin"
-                                              ? "destructive"
-                                              : role === "mentor"
-                                              ? "default"
-                                              : "secondary"
-                                          }
-                                        >
-                                          {role}
-                                          <button
-                                            onClick={() => handleRemoveRole(user.id, role as AppRole)}
-                                            className="ml-1 hover:bg-background/20 rounded p-0.5 transition-colors"
-                                            title={`Remove ${role} role`}
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </Badge>
-                                      ))
-                                    )}
-                                  </div>
-                                  
-                                  {/* Add Role Buttons */}
-                                  {availableRoles.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="text-sm text-muted-foreground">Add:</span>
-                                      {availableRoles.map((role) => (
-                                        <Button
-                                          key={role}
-                                          size="sm"
-                                          variant="outline"
-                                          className="capitalize h-7 text-xs"
-                                          onClick={() => handleAddRole(user.id, role)}
-                                        >
-                                          <Plus className="h-3 w-3 mr-1" />
-                                          {role}
-                                        </Button>
-                                      ))}
-                                    </div>
+                          <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                            <div className="flex-1">
+                              <h3 className="font-semibold">{user.full_name || "Unknown"}</h3>
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Joined: {format(new Date(user.created_at), "MMM dd, yyyy")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              {user.roles.map((role) => (
+                                <Badge key={role} variant="secondary" className="capitalize flex items-center gap-1">
+                                  {role}
+                                  {!(user.id === currentUserId && role === "admin") && (
+                                    <button
+                                      onClick={() => handleRemoveRole(user.id, role as AppRole)}
+                                      className="ml-1 hover:text-destructive"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
                                   )}
+                                </Badge>
+                              ))}
+                              {availableRoles.length > 0 && (
+                                <div className="flex gap-1">
+                                  {availableRoles.map((role) => (
+                                    <Button
+                                      key={role}
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleAddRole(user.id, role)}
+                                      className="text-xs"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      {role}
+                                    </Button>
+                                  ))}
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -561,10 +752,10 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
             </TabsContent>
-
           </Tabs>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

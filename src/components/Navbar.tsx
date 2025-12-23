@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { GraduationCap, LogOut, Shield, User } from "lucide-react";
+import { GraduationCap, LogOut, Shield, User, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Navbar() {
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isMentor, profile } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -78,6 +78,14 @@ export default function Navbar() {
                     Quiz
                   </Button>
                 </Link>
+                {isMentor && (
+                  <Link to="/mentor-dashboard">
+                    <Button variant="outline" size="sm" className="hover-lift hover-glow">
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Mentor Panel
+                    </Button>
+                  </Link>
+                )}
                 {isAdmin && (
                   <Link to="/admin">
                     <Button variant="outline" size="sm" className="hover-lift hover-glow">
