@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserCheck, Calendar, Shield, Users, Plus, X, Activity, GraduationCap, BookOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, UserCheck, Calendar, Shield, Users, Plus, X, Activity, GraduationCap, BookOpen, Search, Filter } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -88,8 +90,64 @@ export default function AdminPanel() {
   const [studentActivities, setStudentActivities] = useState<StudentActivity[]>([]);
   const [mentorActivities, setMentorActivities] = useState<MentorActivity[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // Search and filter states
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [mentorSearch, setMentorSearch] = useState("");
+  const [mentorStatusFilter, setMentorStatusFilter] = useState<string>("all");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [mentorActivitySearch, setMentorActivitySearch] = useState("");
+  const [mentorActivityStatusFilter, setMentorActivityStatusFilter] = useState<string>("all");
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Filtered data using useMemo
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch = userSearch === "" || 
+        user.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        user.email.toLowerCase().includes(userSearch.toLowerCase());
+      
+      const matchesRole = userRoleFilter === "all" || user.roles.includes(userRoleFilter);
+      
+      return matchesSearch && matchesRole;
+    });
+  }, [users, userSearch, userRoleFilter]);
+
+  const filteredMentors = useMemo(() => {
+    return allMentors.filter(mentor => {
+      const matchesSearch = mentorSearch === "" ||
+        mentor.profiles.full_name?.toLowerCase().includes(mentorSearch.toLowerCase()) ||
+        mentor.profiles.email.toLowerCase().includes(mentorSearch.toLowerCase()) ||
+        mentor.company?.toLowerCase().includes(mentorSearch.toLowerCase());
+      
+      const matchesStatus = mentorStatusFilter === "all" || mentor.status === mentorStatusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [allMentors, mentorSearch, mentorStatusFilter]);
+
+  const filteredStudentActivities = useMemo(() => {
+    return studentActivities.filter(student => {
+      return studentSearch === "" ||
+        student.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        student.email.toLowerCase().includes(studentSearch.toLowerCase());
+    });
+  }, [studentActivities, studentSearch]);
+
+  const filteredMentorActivities = useMemo(() => {
+    return mentorActivities.filter(mentor => {
+      const matchesSearch = mentorActivitySearch === "" ||
+        mentor.full_name.toLowerCase().includes(mentorActivitySearch.toLowerCase()) ||
+        mentor.email.toLowerCase().includes(mentorActivitySearch.toLowerCase());
+      
+      const matchesStatus = mentorActivityStatusFilter === "all" || mentor.status === mentorActivityStatusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [mentorActivities, mentorActivitySearch, mentorActivityStatusFilter]);
 
   useEffect(() => {
     checkAdminAccess();
@@ -556,11 +614,38 @@ export default function AdminPanel() {
                   <CardDescription>View and manage all mentors on the platform</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {allMentors.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12">No mentors found</p>
+                  {/* Search and Filter */}
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, email, or company..."
+                        value={mentorSearch}
+                        onChange={(e) => setMentorSearch(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={mentorStatusFilter} onValueChange={setMentorStatusFilter}>
+                      <SelectTrigger className="w-full md:w-[180px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {filteredMentors.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">
+                      {allMentors.length === 0 ? "No mentors found" : "No mentors match your search criteria"}
+                    </p>
                   ) : (
                     <div className="space-y-3">
-                      {allMentors.map((mentor) => (
+                      {filteredMentors.map((mentor) => (
                         <div key={mentor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
                           <div className="flex-1">
                             <h3 className="font-semibold">{mentor.profiles.full_name}</h3>
@@ -610,11 +695,26 @@ export default function AdminPanel() {
                   <CardDescription>Monitor student engagement and activity</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {studentActivities.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12">No students found</p>
+                  {/* Search */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        className="pl-10 max-w-md"
+                      />
+                    </div>
+                  </div>
+
+                  {filteredStudentActivities.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">
+                      {studentActivities.length === 0 ? "No students found" : "No students match your search"}
+                    </p>
                   ) : (
                     <div className="space-y-3">
-                      {studentActivities.map((student) => (
+                      {filteredStudentActivities.map((student) => (
                         <div key={student.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
                           <div className="flex-1">
                             <h3 className="font-semibold">{student.full_name}</h3>
@@ -650,11 +750,38 @@ export default function AdminPanel() {
                   <CardDescription>Monitor mentor performance and engagement</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mentorActivities.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12">No mentors found</p>
+                  {/* Search and Filter */}
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={mentorActivitySearch}
+                        onChange={(e) => setMentorActivitySearch(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={mentorActivityStatusFilter} onValueChange={setMentorActivityStatusFilter}>
+                      <SelectTrigger className="w-full md:w-[180px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {filteredMentorActivities.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">
+                      {mentorActivities.length === 0 ? "No mentors found" : "No mentors match your search criteria"}
+                    </p>
                   ) : (
                     <div className="space-y-3">
-                      {mentorActivities.map((mentor) => (
+                      {filteredMentorActivities.map((mentor) => (
                         <div key={mentor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -697,11 +824,38 @@ export default function AdminPanel() {
                   <CardDescription>Manage user roles and permissions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {users.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-12">No users found</p>
+                  {/* Search and Filter */}
+                  <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                      <SelectTrigger className="w-full md:w-[180px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="student">Students</SelectItem>
+                        <SelectItem value="mentor">Mentors</SelectItem>
+                        <SelectItem value="admin">Admins</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {filteredUsers.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-12">
+                      {users.length === 0 ? "No users found" : "No users match your search criteria"}
+                    </p>
                   ) : (
                     <div className="space-y-3">
-                      {users.map((user) => {
+                      {filteredUsers.map((user) => {
                         const availableRoles = ALL_ROLES.filter(role => !user.roles.includes(role));
                         
                         return (
