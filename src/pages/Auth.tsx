@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, ArrowLeft } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/lib/auth";
 import { useEffect } from "react";
@@ -18,6 +18,8 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"student" | "mentor">("student");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -72,6 +74,82 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+      toast.success("Password reset link sent! Check your email.");
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-hero bg-grid-pattern p-4">
+        <Card className="w-full max-w-md shadow-glow animate-scale-in hover-lift">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4 animate-bounce-in">
+              <div className="bg-gradient-primary p-4 rounded-2xl shadow-glow">
+                <GraduationCap className="h-10 w-10 text-primary-foreground" />
+              </div>
+            </div>
+            <CardTitle className="text-3xl animate-slide-in-left bg-gradient-primary bg-clip-text text-transparent">
+              Reset Password
+            </CardTitle>
+            <CardDescription className="text-base animate-slide-in-right" style={{animationDelay: '0.2s'}}>
+              Enter your email to receive a reset link
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="animate-fade-in" style={{animationDelay: '0.3s'}}>
+            <form onSubmit={handleForgotPassword} className="space-y-5">
+              <div className="space-y-2 animate-slide-up" style={{animationDelay: '0.1s'}}>
+                <Label htmlFor="reset-email" className="text-sm font-medium">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  className="transition-all focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full hover:scale-105 transition-transform hover-glow animate-slide-up" 
+                style={{animationDelay: '0.2s'}}
+                disabled={loading}
+              >
+                {loading ? "Sending..." : "Send Reset Link"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full animate-slide-up"
+                style={{animationDelay: '0.3s'}}
+                onClick={() => setShowForgotPassword(false)}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Sign In
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero bg-grid-pattern p-4">
       <Card className="w-full max-w-md shadow-glow animate-scale-in hover-lift">
@@ -119,6 +197,15 @@ const Auth = () => {
                     required
                     className="transition-all focus:ring-2 focus:ring-primary"
                   />
+                </div>
+                <div className="animate-slide-up" style={{animationDelay: '0.25s'}}>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-primary hover:underline transition-all"
+                  >
+                    Forgot your password?
+                  </button>
                 </div>
                 <Button 
                   type="submit" 
