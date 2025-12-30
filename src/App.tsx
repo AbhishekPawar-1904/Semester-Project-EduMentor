@@ -11,7 +11,7 @@ import Careers from "./pages/Careers";
 import Mentors from "./pages/Mentors";
 import Quiz from "./pages/Quiz";
 import QuizResults from "./pages/QuizResults";
-import AdminPanel from "./pages/AdminPanel";
+
 import Scholarships from "./pages/Scholarships";
 import Colleges from "./pages/Colleges";
 import Resources from "./pages/Resources";
@@ -39,7 +39,7 @@ const App = () => (
             <Route path="/mentors" element={<Mentors />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/quiz-results" element={<QuizResults />} />
-            <Route path="/admin" element={<AdminPanel />} />
+            
             <Route path="/scholarships" element={<Scholarships />} />
             <Route path="/colleges" element={<Colleges />} />
             <Route path="/resources" element={<Resources />} />

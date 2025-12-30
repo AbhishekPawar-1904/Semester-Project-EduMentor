@@ -7,7 +7,6 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   userRole: string | null;
-  isAdmin: boolean;
   isMentor: boolean;
   isStudent: boolean;
   profile: any;
@@ -18,7 +17,6 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   userRole: null,
-  isAdmin: false,
   isMentor: false,
   isStudent: false,
   profile: null,
@@ -131,12 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isAdmin = userRole === "admin";
   const isMentor = userRole === "mentor" || hasApprovedMentorProfile;
-  const isStudent = userRole === "student" && !hasApprovedMentorProfile;
+  const isStudent = !isMentor;
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isMentor, isStudent, profile }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, isMentor, isStudent, profile }}>
       {children}
     </AuthContext.Provider>
   );

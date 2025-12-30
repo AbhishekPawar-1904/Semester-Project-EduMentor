@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Brain, Calendar, BookOpen, Award, Loader2 } from "lucide-react";
 const Dashboard = () => {
-  const { user, loading, isAdmin, isMentor } = useAuth();
+  const { user, loading, isMentor } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
 
@@ -49,10 +49,6 @@ const Dashboard = () => {
     return null;
   }
 
-  if (isAdmin) {
-    navigate("/admin");
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background">

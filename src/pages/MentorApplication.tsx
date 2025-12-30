@@ -92,13 +92,13 @@ export default function MentorApplication() {
           education: validatedData.education,
           company: validatedData.company,
           hourly_rate: validatedData.hourlyRate,
-          status: "pending",
+          status: "approved",
         });
 
       if (error) throw error;
 
-      toast.success("Application submitted successfully! Waiting for admin approval.");
-      navigate("/dashboard");
+      toast.success("Mentor profile created successfully! You can now start mentoring.");
+      navigate("/mentor-dashboard");
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -125,23 +125,21 @@ export default function MentorApplication() {
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
-              <CardTitle>Application Status</CardTitle>
+              <CardTitle>Mentor Profile</CardTitle>
               <CardDescription>
-                Your mentor application has been {existingApplication.status}
+                You already have a mentor profile
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="font-semibold">Status: {existingApplication.status}</p>
+                  <p className="font-semibold">You're a mentor!</p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    {existingApplication.status === "pending" && "Your application is under review by our admin team."}
-                    {existingApplication.status === "approved" && "Congratulations! You can now start mentoring students."}
-                    {existingApplication.status === "rejected" && "Unfortunately, your application was not approved at this time."}
+                    You can access your mentor dashboard to manage sessions and connect with students.
                   </p>
                 </div>
-                <Button onClick={() => navigate("/dashboard")} className="w-full">
-                  Go to Dashboard
+                <Button onClick={() => navigate("/mentor-dashboard")} className="w-full">
+                  Go to Mentor Dashboard
                 </Button>
               </div>
             </CardContent>
@@ -157,9 +155,9 @@ export default function MentorApplication() {
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle>Mentor Application</CardTitle>
+            <CardTitle>Become a Mentor</CardTitle>
             <CardDescription>
-              Fill in your details to apply as a mentor. Your application will be reviewed by our admin team.
+              Fill in your details to become a mentor and start helping students.
             </CardDescription>
           </CardHeader>
           <CardContent>
