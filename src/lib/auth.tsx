@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [hasApprovedMentorProfile, setHasApprovedMentorProfile] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener
@@ -51,10 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
             fetchUserProfile(session.user.id);
+            checkMentorProfile(session.user.id);
           }, 0);
         } else {
           setUserRole(null);
           setProfile(null);
+          setHasApprovedMentorProfile(false);
         }
         
         setLoading(false);
@@ -69,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchUserRole(session.user.id);
         fetchUserProfile(session.user.id);
+        checkMentorProfile(session.user.id);
       }
       
       setLoading(false);
@@ -111,9 +115,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const checkMentorProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("mentor_profiles")
+        .select("status")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setHasApprovedMentorProfile(data?.status === "approved");
+    } catch (error) {
+      console.error("Error checking mentor profile:", error);
+      setHasApprovedMentorProfile(false);
+    }
+  };
+
   const isAdmin = userRole === "admin";
-  const isMentor = userRole === "mentor";
-  const isStudent = userRole === "student";
+  const isMentor = userRole === "mentor" || hasApprovedMentorProfile;
+  const isStudent = userRole === "student" && !hasApprovedMentorProfile;
 
   return (
     <AuthContext.Provider value={{ user, session, loading, userRole, isAdmin, isMentor, isStudent, profile }}>
